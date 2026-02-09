@@ -308,11 +308,11 @@ def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev
 
 if __name__ == "__main__":
     # Example usage
-    print("Example: Stark shift for a ryberg")
+    print("Example: Stark shift for a ryberg atoms")
     
     # Rydberg state
     print_stark_shift(n=150, electric_field=2, m=1, k=1)
     
     # Plot energy level diagram
-    plot_stark_levels(n=150, electric_field=2, m=1, unit='hz')
+    plot_stark_levels(n=150, electric_field=2, m=, unit='hz')
     
