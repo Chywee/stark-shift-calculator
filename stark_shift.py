@@ -210,11 +210,7 @@ if __name__ == "__main__":
     # Example usage
     print("Example: Stark shift for hydrogen")
     
-    # Example 1: Ground state (n=1) in a moderate field
-    print_stark_shift(n=1, electric_field=1e7)  # 10 MV/m
+    # Rydberg state (n=100) 
+    print_stark_shift(n=100, electric_field=0.1)  
     
-    # Example 2: Excited state (n=2) with linear Stark effect
-    print_stark_shift(n=2, electric_field=1e6, k=1)  # 1 MV/m
     
-    # Example 3: Higher excited state (n=10) - Rydberg atom
-    print_stark_shift(n=10, electric_field=1e4, k=5)  # 10 kV/m
