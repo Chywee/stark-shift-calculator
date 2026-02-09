@@ -6,6 +6,7 @@ for a given principal quantum number n and electric field strength.
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Physical constants (SI units)
 E_HARTREE = 4.3597447222071e-18  # Hartree energy in Joules
@@ -206,11 +207,112 @@ def print_stark_shift(n: int, electric_field: float, m: int = 0, k: int = 0):
     print(f"{'='*60}\n")
 
 
+def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev'):
+    """
+    Plot energy level diagram showing unperturbed and Stark-shifted levels.
+    
+    Parameters
+    ----------
+    n : int
+        Principal quantum number (n >= 2 for interesting splitting)
+    electric_field : float
+        Electric field strength in V/m
+    m : int, optional
+        Magnetic quantum number, default is 0
+    unit : str, optional
+        Unit for energy display: 'ev', 'hz', 'cm_inv', or 'joules'
+    """
+    # Unperturbed energy: E_n = -13.6 eV / n²
+    E_unperturbed_ev = -13.6 / n**2
+    
+    # Convert to requested unit
+    unit_labels = {
+        'ev': ('eV', 1),
+        'hz': ('Hz', EV_TO_JOULE / 6.62607015e-34),
+        'cm_inv': ('cm⁻¹', EV_TO_JOULE / 6.62607015e-34 / 2.99792458e10),
+        'joules': ('J', EV_TO_JOULE)
+    }
+    
+    if unit not in unit_labels:
+        raise ValueError(f"Unit must be one of {list(unit_labels.keys())}")
+    
+    unit_label, conversion = unit_labels[unit]
+    E_unperturbed = E_unperturbed_ev * conversion
+    
+    # Calculate all possible k values: -(n-1-|m|) to (n-1-|m|)
+    k_max = n - 1 - abs(m)
+    k_values = list(range(-k_max, k_max + 1))
+    
+    # Calculate shifted energies for each k
+    shifted_energies = []
+    labels = []
+    
+    for k in k_values:
+        shift = total_stark_shift(n, k, electric_field, m)
+        shift_value = shift[f'shift_{unit}'] if unit != 'ev' else shift['shift_ev']
+        if unit == 'ev':
+            E_shifted = E_unperturbed_ev + shift_value
+        else:
+            E_shifted = E_unperturbed + shift_value * conversion if unit == 'ev' else E_unperturbed + shift[f'shift_{unit}']
+        
+        # Recalculate properly
+        E_shifted = E_unperturbed + shift[f'shift_{unit}'] if unit != 'ev' else E_unperturbed_ev + shift['shift_ev']
+        shifted_energies.append(E_shifted)
+        labels.append(f'k={k}')
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot unperturbed level (left side)
+    ax.hlines(E_unperturbed if unit != 'ev' else E_unperturbed_ev, 0, 0.4, 
+              colors='blue', linewidth=3, label=f'Non perturbé (n={n})')
+    ax.text(0.2, (E_unperturbed if unit != 'ev' else E_unperturbed_ev), 
+            f'n={n}', ha='center', va='bottom', fontsize=12, color='blue')
+    
+    # Plot shifted levels (right side)
+    colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(k_values)))
+    
+    for i, (E, k, label) in enumerate(zip(shifted_energies, k_values, labels)):
+        ax.hlines(E, 0.6, 1.0, colors=colors[i], linewidth=2)
+        ax.text(1.02, E, label, ha='left', va='center', fontsize=9, color=colors[i])
+    
+    # Draw connecting lines
+    E_ref = E_unperturbed if unit != 'ev' else E_unperturbed_ev
+    for i, E in enumerate(shifted_energies):
+        ax.plot([0.4, 0.6], [E_ref, E], 'k--', alpha=0.3, linewidth=0.8)
+    
+    # Formatting
+    ax.set_xlim(-0.1, 1.3)
+    
+    # Set y-axis limits with some padding
+    all_energies = [E_ref] + shifted_energies
+    y_min, y_max = min(all_energies), max(all_energies)
+    padding = (y_max - y_min) * 0.1 if y_max != y_min else abs(y_min) * 0.1
+    ax.set_ylim(y_min - padding, y_max + padding)
+    
+    ax.set_ylabel(f'Énergie ({unit_label})', fontsize=12)
+    ax.set_title(f'Effet Stark pour H (n={n}, F={electric_field:.2e} V/m, m={m})', fontsize=14)
+    
+    # Remove x-axis ticks and add labels
+    ax.set_xticks([0.2, 0.8])
+    ax.set_xticklabels(['Sans champ', 'Avec champ\n(effet Stark)'])
+    
+    ax.axvline(x=0.5, color='gray', linestyle=':', alpha=0.5)
+    ax.legend(loc='upper right')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return fig, ax
+
+
 if __name__ == "__main__":
     # Example usage
-    print("Example: Stark shift for hydrogen")
+    print("Example: Stark shift for a ryberg")
     
-    # Rydberg state (n=100) 
-    print_stark_shift(n=150, electric_field=2, m = 1 ,k  = 1)  
+    # Rydberg state
+    print_stark_shift(n=150, electric_field=2, m=1, k=1)
     
+    # Plot energy level diagram
+    plot_stark_levels(n=150, electric_field=2, m=1, unit='hz')
     
