@@ -211,6 +211,6 @@ if __name__ == "__main__":
     print("Example: Stark shift for hydrogen")
     
     # Rydberg state (n=100) 
-    print_stark_shift(n=100, electric_field=0.1)  
+    print_stark_shift(n=150, electric_field=2, m = 1 ,k  = 1)  
     
     
