@@ -207,7 +207,7 @@ def print_stark_shift(n: int, electric_field: float, m: int = 0, k: int = 0):
     print(f"{'='*60}\n")
 
 
-def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev'):
+def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev', l: int = None):
     """
     Plot energy level diagram showing unperturbed and Stark-shifted levels.
     
@@ -221,6 +221,9 @@ def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev
         Magnetic quantum number, default is 0
     unit : str, optional
         Unit for energy display: 'ev', 'hz', 'cm_inv', or 'joules'
+    l : int, optional
+        Angular momentum quantum number to filter (0=s, 1=p, 2=d, etc.)
+        If None, shows all states. Default is None.
     """
     # Unperturbed energy: E_n = -13.6 eV / n²
     E_unperturbed_ev = -13.6 / n**2
@@ -242,6 +245,21 @@ def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev
     # Calculate all possible k values: -(n-1-|m|) to (n-1-|m|)
     k_max = n - 1 - abs(m)
     k_values = list(range(-k_max, k_max + 1))
+    
+    # Filter by orbital type if l is specified
+    # For a given l, the number of states with that l and given m is 1 (if |m| <= l)
+    # In parabolic coordinates, we filter to states that correspond to l at zero field
+    if l is not None:
+        if l < abs(m) or l > n - 1:
+            raise ValueError(f"Invalid l={l} for n={n}, m={m}. Need |m| <= l <= n-1")
+        # For a specific l, the corresponding k value in the zero-field limit
+        # The states are indexed by l from |m| to n-1
+        # k_values go from -k_max to k_max in steps of 1
+        # State with angular momentum l corresponds to index (l - |m|) from the set
+        l_index = l - abs(m)
+        # k values are ordered, pick the one corresponding to l
+        # Actually for Stark mixing, we keep only the state that maps to l at F=0
+        k_values = [k_values[l_index]]
     
     # Calculate shifted energies for each k
     shifted_energies = []
@@ -291,7 +309,9 @@ def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev
     ax.set_ylim(y_min - padding, y_max + padding)
     
     ax.set_ylabel(f'Énergie ({unit_label})', fontsize=12)
-    ax.set_title(f'Effet Stark pour H (n={n}, F={electric_field:.2e} V/m, m={m})', fontsize=14)
+    orbital_names = {0: 's', 1: 'p', 2: 'd', 3: 'f', 4: 'g'}
+    l_str = f", l={l} ({orbital_names.get(l, '')})" if l is not None else ""
+    ax.set_title(f'Effet Stark pour H (n={n}, F={electric_field:.2e} V/m, m={m}{l_str})', fontsize=14)
     
     # Remove x-axis ticks and add labels
     ax.set_xticks([0.2, 0.8])
@@ -308,11 +328,11 @@ def plot_stark_levels(n: int, electric_field: float, m: int = 0, unit: str = 'ev
 
 if __name__ == "__main__":
     # Example usage
-    print("Example: Stark shift for a ryberg atoms")
+    print("Stark shift for a ryberg atoms")
     
     # Rydberg state
-    print_stark_shift(n=150, electric_field=2, m=1, k=1)
+    print_stark_shift(n=100, electric_field=200, m=1)
     
-    # Plot energy level diagram
-    plot_stark_levels(n=150, electric_field=2, m=, unit='hz')
+    # Plot energy level diagram for p orbital only (l=1)
+    plot_stark_levels(n=100, electric_field=200, m=1, unit='hz', l=1)
     
