@@ -13,6 +13,8 @@ E_HARTREE = 4.3597447222071e-18  # Hartree energy in Joules
 A_BOHR = 5.29177210903e-11       # Bohr radius in meters
 E_CHARGE = 1.602176634e-19       # Elementary charge in Coulombs
 EV_TO_JOULE = 1.602176634e-19    # eV to Joules conversion
+H_PLANCK = 6.62607015e-34        # Planck constant in J·s
+RYDBERG_HZ = 3.2898419602508e15  # Rydberg frequency in Hz (R_inf * c)
 
 
 def quadratic_stark_shift(n: int, electric_field: float, m: int = 0) -> dict:
@@ -57,14 +59,19 @@ def quadratic_stark_shift(n: int, electric_field: float, m: int = 0) -> dict:
     # Convert to SI units
     shift_joules = shift_au * E_HARTREE
     shift_ev = shift_joules / EV_TO_JOULE
-    shift_hz = shift_joules / (6.62607015e-34)  # Planck constant
+    shift_hz = shift_joules / H_PLANCK
     shift_cm_inv = shift_hz / (2.99792458e10)   # Speed of light in cm/s
+    
+    # Transition frequency from ground state (n=1) to level n
+    # E_n - E_1 = -13.6 eV * (1/n² - 1) = 13.6 eV * (1 - 1/n²)
+    transition_from_ground_hz = RYDBERG_HZ * (1 - 1/n**2)
     
     return {
         'shift_joules': shift_joules,
         'shift_ev': shift_ev,
         'shift_hz': shift_hz,
-        'shift_cm_inv': shift_cm_inv
+        'shift_cm_inv': shift_cm_inv,
+        'transition_from_ground_hz': transition_from_ground_hz
     }
 
 
@@ -110,14 +117,18 @@ def linear_stark_shift(n: int, k: int, electric_field: float) -> dict:
     # Convert to SI units
     shift_joules = shift_au * E_HARTREE
     shift_ev = shift_joules / EV_TO_JOULE
-    shift_hz = shift_joules / (6.62607015e-34)
+    shift_hz = shift_joules / H_PLANCK
     shift_cm_inv = shift_hz / (2.99792458e10)
+    
+    # Transition frequency from ground state (n=1) to level n
+    transition_from_ground_hz = RYDBERG_HZ * (1 - 1/n**2)
     
     return {
         'shift_joules': shift_joules,
         'shift_ev': shift_ev,
         'shift_hz': shift_hz,
-        'shift_cm_inv': shift_cm_inv
+        'shift_cm_inv': shift_cm_inv,
+        'transition_from_ground_hz': transition_from_ground_hz
     }
 
 
@@ -142,17 +153,20 @@ def total_stark_shift(n: int, k: int, electric_field: float, m: int = 0) -> dict
     dict
         Dictionary containing shift values in various units
     """
-    result = {'shift_joules': 0, 'shift_ev': 0, 'shift_hz': 0, 'shift_cm_inv': 0}
+    result = {'shift_joules': 0, 'shift_ev': 0, 'shift_hz': 0, 'shift_cm_inv': 0, 'transition_from_ground_hz': 0}
     
     # Add quadratic contribution
     quad = quadratic_stark_shift(n, electric_field, m)
     for key in result:
         result[key] += quad[key]
     
+    # Set transition frequency (same for all contributions)
+    result['transition_from_ground_hz'] = quad['transition_from_ground_hz']
+    
     # Add linear contribution if applicable
     if n >= 2 and k != 0:
         lin = linear_stark_shift(n, k, electric_field)
-        for key in result:
+        for key in ['shift_joules', 'shift_ev', 'shift_hz', 'shift_cm_inv']:
             result[key] += lin[key]
     
     return result
@@ -185,6 +199,26 @@ def print_stark_shift(n: int, electric_field: float, m: int = 0, k: int = 0):
     
     # Quadratic shift
     quad = quadratic_stark_shift(n, electric_field, m)
+    # Fréquences des deux premiers lasers pour excitation à 3 photons (en Hz)
+    LASER1_HZ = 709077.785e9  # 709077.785 GHz
+    LASER2_HZ = 409095.943e9  # 409095.943 GHz
+    
+    print(f"\nTransition frequency from ground state (n=1 → n={n}):")
+    print(f"  ν = {quad['transition_from_ground_hz']:.6e} Hz")
+    print(f"  ν = {quad['transition_from_ground_hz']/1e6:.6e} MHz")
+    print(f"  ν = {quad['transition_from_ground_hz']/1e12:.6f} THz")
+    
+    # Option laser 3 photons
+    use_3_photon = input("\nUtiliser excitation à 3 photons? (y/n): ").strip().lower()
+    if use_3_photon == 'y':
+        freq_laser3 = quad['transition_from_ground_hz'] - LASER1_HZ - LASER2_HZ
+        print(f"\nFréquence du 3ème laser (après soustraction des 2 premiers):")
+        print(f"  Laser 1: {LASER1_HZ/1e9:.3f} GHz")
+        print(f"  Laser 2: {LASER2_HZ/1e9:.3f} GHz")
+        print(f"  Laser 3: {freq_laser3:.6e} Hz")
+        print(f"  Laser 3: {freq_laser3/1e6:.6e} MHz")
+        print(f"  Laser 3: {freq_laser3/1e9:.6f} GHz")
+    
     print(f"\nQuadratic Stark shift (2nd order):")
     print(f"  ΔE = {quad['shift_ev']:.6e} eV")
     print(f"  ΔE = {quad['shift_hz']:.6e} Hz")
@@ -331,8 +365,8 @@ if __name__ == "__main__":
     print("Stark shift for a ryberg atoms")
     
     # Rydberg state
-    print_stark_shift(n=100, electric_field=200, m=1)
+    print_stark_shift(n=100, electric_field=20, m=1, k=1)
     
     # Plot energy level diagram for p orbital only (l=1)
-    plot_stark_levels(n=100, electric_field=200, m=1, unit='hz', l=1)
+    plot_stark_levels(n=100, electric_field=20, m=1, unit='hz', l=1)
     
